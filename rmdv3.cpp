@@ -1,6 +1,7 @@
 #include "rmdv3.h"
 void cmd_resolve(String cmd) {
   String cmd_head = cmd.substring(0, 4);
+  String cmd_head_2 = cmd.substring(0, 2);
   Serial.println("cmd_head:" + cmd_head);
   if (cmd_head == "0x81") {
     stop_motor();
@@ -19,6 +20,25 @@ void cmd_resolve(String cmd) {
   if (cmd_head == "0x60") {
     read_motor__pose();
     Serial.println("read_motor__pose:");
+  }
+  if (cmd_head_2 == "b") {
+    String duration_str = cmd.substring(2);
+    duration_str.trim();
+    unsigned long duration = duration_str.toInt();
+    if (duration > 0) {
+      Serial.println("Starting loop_action1 for " + String(duration) + " seconds");
+      loop_action1_timed(duration * 1000); // 转换为毫秒
+    } else {
+      Serial.println("Invalid duration for cb command");
+    }
+  }
+  if (cmd_head_2 == "cs") {
+    if (cb_running) {
+      cb_running = false;
+      Serial.println("Stopping cb command");
+    } else {
+      Serial.println("No cb command is running");
+    }
   }
 
 }
@@ -166,6 +186,90 @@ void loop_action1(void) {
   Serial.println("you wait 3s !");
   delay(3000);
   Serial.println("1 over!");
+  stop_motor();
+}
+
+//定时运行loop_action1，可以通过cs指令提前停止
+void loop_action1_timed(unsigned long duration) {
+  unsigned long myTime = 0;
+  float t = 0;
+  float dt = 0;
+  float local_Offset_angle = Offset_angle;
+  int temp2 = 0;
+  float Offset_angle = 0;
+  char temp_falg = 'b';
+  int i, j, val; //定义i、j、val三个整型变量
+  char A[8];  //定义一个无符号数组A
+  w = 2.0 * 3.1415926 * f;
+  set_zero();
+  delay(1000);
+  time_start = millis();
+  cb_running = true;
+  cb_duration = duration;
+  unsigned long cb_start_time = millis();
+  
+  while (cb_running) {
+    // 检查是否超过指定时长
+    if (millis() - cb_start_time >= duration) {
+      Serial.println("cb command duration completed");
+      break;
+    }
+    
+    myTime = millis() - time_start;
+    dt = myTime / 1000.0 - t;
+    t = myTime / 1000.0;
+    angle = long((1 - exp(-t)) * a * sin(w * t) );
+    angles_control_speed(angle, speed_MAX);
+    
+    if ( Serial.read() == 'c') {
+      delay(10);
+      j = Serial.available();  // 读取串口寄存器中的信息的帧数
+      if (j != 0) { // 如果串口寄存器中有数据，那么依次读取这些数据，并存放到数组A中
+        temp_falg = Serial.read();
+        for (i = 0; i < 8; i++) {
+          A[i] = ' ';
+        }
+        for (i = 0; i < j - 1; i++) {
+          A[i] = Serial.read();
+        }
+        val = strtol(A, NULL, 10); // 将A中的字符转换成十进制数
+
+        if (temp_falg == 's') {
+          Serial.println("cs command received, stopping cb");
+          cb_running = false;
+          break;
+        }
+        if (temp_falg == 'o') {
+          if (abs(val * 120.0) < a) {
+            Offset_angle = val * 100.0;
+            Serial.print("Offset_angle:");
+            Serial.println(Offset_angle);
+          }
+
+        }
+        if (temp_falg == 'r') {
+          Offset_angle = 10 * 100.0;
+        }
+        if (temp_falg == 'l') {
+          Offset_angle = -10 * 100.0;
+        }
+        if (temp_falg == 'z') {
+          Serial.println(A);
+        }
+        Serial.print(temp_falg);
+        Serial.print("  dt(ms): ");
+        Serial.println(dt * 1000);
+      }
+    }
+    delay(delaytime);
+  }
+  
+  cb_running = false;
+  angles_control_speed(0, 6 * 6);
+  delay(delaytime);
+  Serial.println("you wait 3s !");
+  delay(3000);
+  Serial.println("cb command finished!");
   stop_motor();
 }
 

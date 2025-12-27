@@ -18,6 +18,8 @@ float Offset_angle = 0.0;//偏移度数
 unsigned long time_start;
 unsigned long myTime;
 int delaytime = 20;
+bool cb_running = false;
+unsigned long cb_duration = 0;
 
 MCP2515 mcp2515(2);
 String str = "";

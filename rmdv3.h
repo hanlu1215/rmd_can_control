@@ -19,10 +19,13 @@ extern char flag;
 extern int ibus_val[6];
 extern int32_t angle, a;
 extern int32_t speed_control;
+extern bool cb_running;
+extern unsigned long cb_duration;
 
 extern MCP2515 mcp2515;
 
 void loop_action1(void);
+void loop_action1_timed(unsigned long duration);
 void loop_action0(void);
 void loop_action2(int32_t);
 void angles_control_speed(int32_t angle, uint16_t speedt);
