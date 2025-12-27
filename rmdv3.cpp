@@ -21,7 +21,7 @@ void cmd_resolve(String cmd) {
     read_motor__pose();
     Serial.println("read_motor__pose:");
   }
-  if (cmd_head_2 == "b") {
+  if (cmd_head_2 == "cb") {
     String duration_str = cmd.substring(2);
     duration_str.trim();
     unsigned long duration = duration_str.toInt();
